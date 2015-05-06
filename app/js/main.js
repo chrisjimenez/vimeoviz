@@ -15,23 +15,6 @@
 ***************************************************************************/
 'use strict';
 
-
-var getEmbeddedVideo = function(videoUrl){
-
-    // This is the oEmbed endpoint for Vimeo (we're using JSON)
-    // (Vimeo also supports oEmbed discovery. See the PHP example.)
-    var endpoint = 'http://www.vimeo.com/api/oembed.json';
-
-    // Tell Vimeo what function to call
-    var callback = 'embedVideo';
-
-    // Put together the URL
-    var url = endpoint + '?url=' + encodeURIComponent(videoUrl) + '&callback=' + callback + '&width=640';
-
-
-}
-
-
 /**
 * Search field 
 */
@@ -58,11 +41,20 @@ var PageNav = React.createClass({
 * video 
 */
 var VideoBlock = React.createClass({
+    getEmbeddedVideo : function(videoId){
+        var src = "http://player.vimeo.com/video/"+videoId;
+        console
+        return (
+            <iframe src={src} width="100px" height="100px" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
+        );
+    },
+
+
     render : function() {
         return (
             <div className ='video-block'> 
                 <div className ="video">
-                    {this.props.videoData.url}
+                    {this.getEmbeddedVideo(this.props.videoData.id)}
                 </div>
                 <div className ="description">
                     {this.props.videoData.description}
