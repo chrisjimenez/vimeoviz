@@ -1,0 +1,40 @@
+/***************************************************************************
+* Vimeo Search
+* main.css
+***************************************************************************/
+@import url(http://fonts.googleapis.com/css?family=Quicksand);
+
+html, body {
+  height: 100%;
+  font-family: Quicksand;
+  text-align:center;
+}
+
+.header {
+  text-align:center;
+  background-color: purple;
+}
+
+.footer {
+  width:100%;
+  position:absolute;
+  bottom:0;
+  left:0;
+  background-color: blue;
+}
+
+.main{
+  padding: 5px;
+  width: 100%;
+  background-color: yellow;
+}
+
+.page-nav {
+  width: 100%;
+}
+
+.video-block {
+  width: 200px;
+  height: 200px;
+  background-color: green;
+}
