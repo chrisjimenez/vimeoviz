@@ -15,11 +15,21 @@
 ***************************************************************************/
 'use strict';
 
-var data = [
-  {author: "Pete Hunt", text: "This is one comment"},
-  {author: "Jordan Walke", text: "This is *another* comment"}
-];
 
+var getEmbeddedVideo = function(videoUrl){
+
+    // This is the oEmbed endpoint for Vimeo (we're using JSON)
+    // (Vimeo also supports oEmbed discovery. See the PHP example.)
+    var endpoint = 'http://www.vimeo.com/api/oembed.json';
+
+    // Tell Vimeo what function to call
+    var callback = 'embedVideo';
+
+    // Put together the URL
+    var url = endpoint + '?url=' + encodeURIComponent(videoUrl) + '&callback=' + callback + '&width=640';
+
+
+}
 
 
 /**
@@ -47,12 +57,16 @@ var PageNav = React.createClass({
 /**
 * video 
 */
-var Video = React.createClass({
+var VideoBlock = React.createClass({
     render : function() {
         return (
             <div className ='video-block'> 
-                <div className ="video"></div>
-                <div className ="description"></div>
+                <div className ="video">
+                    {this.props.videoData.url}
+                </div>
+                <div className ="description">
+                    {this.props.videoData.description}
+                </div>
                 <div className ="stats"></div> 
             </div>
         );
@@ -61,20 +75,19 @@ var Video = React.createClass({
 
 
 /**
-* video List
+* video list
 */
 var VideoList = React.createClass({
     render : function() {
-        var videoNodes = this.props.data.map(function(video){
+        var videoBlockNodes = this.props.data.map(function(videoData){
             return (
-                <Video></Video>
+                <VideoBlock videoData={videoData}/>
             );
         });
 
-
         return (
             <div className ='video-list'>
-                {videoNodes}
+                {videoBlockNodes}
             </div>
         );
     }
@@ -98,11 +111,34 @@ var Header = React.createClass({
 * main
 */
 var Main = React.createClass({
+    loadSelections : function(){
+        $.ajax({
+            url: this.props.url,
+            dataType: 'json',
+            cache: false,
+            success: function(data) {
+                this.setState({data: data});
+            }.bind(this),
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+
+    },
+
+    getInitialState : function() {
+        return {data : []};
+    },
+    componentDidMount : function(){
+        this.loadSelections();
+        setInterval(this.loadSelections(), this.props.pollInterval)
+    },
+
     render : function() {
         return (
             <div className ='main'>
                 <SearchField />
-                <VideoList data={this.props.data} />
+                <VideoList data={this.state.data} />
             </div>
         );
     }
@@ -117,7 +153,6 @@ var Footer = React.createClass({
     render : function() {
         return (
             <div className ='footer'>
-                <PageNav />
                 <h1> FOOTER </h1>
             </div>
         );
@@ -134,7 +169,7 @@ var Container = React.createClass({
         return (
             <div>
                 <Header />
-                <Main data={data} />
+                <Main url ="http://vimeo.com/api/v2/channel/staffpicks/videos.json" pollInterval = {2000} />
                 <Footer />
             </div>
         );
