@@ -38,11 +38,12 @@ var Container = React.createClass({
           dataType: 'json',
           cache: false,
           success: function(data) {
-              // if there is no logo, assign to a default logo
-              if(!data.logo) data.logo = "https://i.vimeocdn.com/video/default_980x250";
+              //if successful, set info to new data
               this.setState({info: data});
+              $('.search-field').val("").css({'color':'black'});
           }.bind(this),
           error: function(xhr, status, err) {
+              $('.search-field').val("INVALID SEARCH!").css({'color':'red'});
               console.error(infoUrl, status, err.toString());
           }.bind(this)
       });
@@ -54,34 +55,35 @@ var Container = React.createClass({
   // response limit is 60 videos using &page param
   _getVideos : function(searchQuery){
       var videoUrl = "http://vimeo.com/api/v2/channel/"+searchQuery+"/videos.json&?page=";
-      var videoList = [];
 
       $.ajax({
           url: videoUrl+"1",
           dataType: 'json',
           cache: false,
           success: function(data1) {
-                 $.ajax({
-                    url: videoUrl+"2",
-                    dataType: 'json',
-                    cache: false,
-                    success: function(data2) {
-                                         $.ajax({
-                                            url: videoUrl+"3",
-                                            dataType: 'json',
-                                            cache: false,
-                                            success: function(data3) {
-                                                this.setState({videos: data1.concat(data2).concat(data3)});
-                                            }.bind(this),
-                                            error: function(xhr, status, err) {
-                                                console.error(videoUrl+"3", status, err.toString());
-                                            }.bind(this)
-                                        });  
-                    }.bind(this),
-                    error: function(xhr, status, err) {
-                        console.error(videoUrl+"2", status, err.toString());
-                    }.bind(this)
-                });  
+            this.setState({videos: data1});
+             $.ajax({
+                url: videoUrl+"2",
+                dataType: 'json',
+                cache: false,
+                success: function(data2) {
+                      this.setState({videos: data1.concat(data2)});
+                     $.ajax({
+                        url: videoUrl+"3",
+                        dataType: 'json',
+                        cache: false,
+                        success: function(data3) {
+                            this.setState({videos: data1.concat(data2).concat(data3)});
+                        }.bind(this),
+                        error: function(xhr, status, err) {
+                            console.error(videoUrl+"3", status, err.toString());
+                        }.bind(this)
+                    });  
+                }.bind(this),
+                error: function(xhr, status, err) {
+                    console.error(videoUrl+"2", status, err.toString());
+                }.bind(this)
+              });  
           }.bind(this),
           error: function(xhr, status, err) {
               console.error(videoUrl+"1", status, err.toString());
@@ -108,8 +110,7 @@ var Container = React.createClass({
               <Main info = {this.state.info} videos = {this.state.videos} />
               <div className ='footer'>
                 <a href = "http://www.github.com/chrisjimenez/vimeoviz"> 
-                  <img src ="github-icon.png">
-                  </img>
+                  <img src ="github-icon.png" />
                 </a>
               </div>
           </div>
@@ -124,25 +125,22 @@ var Container = React.createClass({
 var Header = React.createClass({
   // Handles the submission from the child input DOM element
   _handleSubmit : function() {
-      // remove any potential extra spaces in the search query
-      var searchQuery = React.findDOMNode(this.refs.searchQuery).value.trim();
+    var searchQuery = React.findDOMNode(this.refs.searchQuery).value.trim();
 
-      // return if there is no search request
-      if (!searchQuery) {
-          return;
-      }
+    if (!searchQuery) {
+        return;
+    }
 
-      // send search query back up to parent(Container)
-      this.props.onSearchSubmission(searchQuery);
+    this.props.onSearchSubmission(searchQuery);
   },
 
   render : function() {
     return (
       <div className ='header'>
-        <h3>Vimeo Channel Stats Visualization</h3>
+        <h3>Vimeo Channel Statistics</h3>
         <div className ="search-form">
           <input className ="search-field" type="text" placeholder="Search for channels" ref = "searchQuery" />
-          <input className ="search-button"type="button" value="Submit" onClick={this._handleSubmit}/>
+          <input className ="search-button"type="button" value="Search" onClick={this._handleSubmit}/>
         </div>
       </div>
     );
@@ -173,15 +171,19 @@ var Main = React.createClass({
     };
   },
 
+
   render : function() {
-    var dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "hey";
+    var dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "?";
+    
 
     return (
       <div className = "main">
-        <img className="logo-header" src = {this.props.info.logo} />
+        <img className="logo-header" src = {this.props.info.logo || "https://i.vimeocdn.com/video/default_980x250"} />
         <h1 style ={{'fontWeight':'300'}}>{this.props.info.name} </h1><br />
         Created By <b>{this.props.info.creator_display_name}</b> on {dateCreated}
+        
         <p>{this.props.info.description}</p>
+
         <p>
         Videos : <b>{this.props.info.total_videos}</b> <br /> 
         Subscribers : <b>{this.props.info.total_subscribers}</b>
@@ -203,181 +205,158 @@ var BubbleChart = React.createClass({
   // Displays the bubble chart
   _runD3Visualization : function(videos){
 
-      // remove the old svg element from the page 
-      d3.select("svg").remove();
+    // remove the old svg element from the page 
+    d3.select("svg").remove();
 
-      var width = 760,
-          height = 600;
+    var width = 760,
+        height = 600;
 
-      // set up the new svg element
-      var svg = d3.select('.bubble-diagram').append('svg')
-                .attr('width', width)
-                .attr('height', height);
+    // set up the new svg element
+    var svg = d3.select('.bubble-diagram').append('svg')
+              .attr('width', width)
+              .attr('height', height);
 
-      // video node style based on statType
-      var videoNodeSpecs = {
-          'stats_number_of_plays' : {
-              'style' : {
-                    'stroke': 'green',
-                    'fill':'#66CC99',                
-                    },
-              'max' : 0
-          },
-          'stats_number_of_likes' : {
-              'style' : {
-                    'stroke': 'red',
-                    'fill':'#DF4949'              
-                    },
-              'max' : 0
-          },
-          'stats_number_of_comments' : {
-              'style' : {
-                    'stroke':'blue',
-                    'fill':'#44BBFF'               
-                    },
+    // video node specs based on statype
+    var videoNodeSpecs = {
+        'stats_number_of_plays' : {
+            'style' : {
+                  'stroke': 'green',
+                  'fill':'#66CC99',                
+                  },
+            'max' : 0
+        },
+        'stats_number_of_likes' : {
+            'style' : {
+                  'stroke': 'red',
+                  'fill':'#DF4949'              
+                  },
+            'max' : 0
+        },
+        'stats_number_of_comments' : {
+            'style' : {
+                  'stroke':'blue',
+                  'fill':'#44BBFF'               
+                  },
 
-              'max' : 0
-          },
-          'duration' : {
-              'style' : {
-                    'stroke':'purple',
-                    'fill':'yellow',               
-                    },
+            'max' : 0
+        },
+        'duration' : {
+            'style' : {
+                  'stroke':'purple',
+                  'fill':'yellow',               
+                  },
 
-              'max' : 0       
-          }
-      }
+            'max' : 0       
+        }
+    }
 
-      //get stat range for each video
-      for(var i = 0; i < videos.length; i++){
-        if(videoNodeSpecs.stats_number_of_plays.max < videos[i].stats_number_of_plays) 
-          videoNodeSpecs.stats_number_of_plays.max = videos[i].stats_number_of_plays;
+    //get stat range for each video
+    for(var i = 0; i < videos.length; i++){
+      if(videoNodeSpecs.stats_number_of_plays.max < videos[i].stats_number_of_plays) 
+        videoNodeSpecs.stats_number_of_plays.max = videos[i].stats_number_of_plays;
 
-        if(videoNodeSpecs.stats_number_of_likes.max < videos[i].stats_number_of_likes) 
-          videoNodeSpecs.stats_number_of_likes.max = videos[i].stats_number_of_likes;
-        
-        if(videoNodeSpecs.stats_number_of_comments.max < videos[i].stats_number_of_comments) 
-          videoNodeSpecs.stats_number_of_comments.max = videos[i].stats_number_of_comments;
-        
-        if(videoNodeSpecs.duration.max < videos[i].duration) 
-          videoNodeSpecs.duration.max = videos[i].duration;
-      }
-
-      // determine stattype 
-      var statPicker = document.getElementById('stat-picker'),
-        statType = statPicker.options[statPicker.selectedIndex].value;
-
-      // render chart for the first time, 
-      // local variable created for  video click handler
-      // for reference
-      var onVideoClick = this.props.onVideoClick
-
-      renderChart(onVideoClick);
-
-      //update stattype on selection and re-render chart
-      statPicker.addEventListener('change', function(e){
-          statType = statPicker.options[statPicker.selectedIndex].value;
-          renderChart(onVideoClick);
-      }, false);
-
-
-      // small window that disaplys when mouse hovers over a video node
-      var tooltip = d3.select("body").append("div")
-                      .attr("class", "tooltip")
-                      .style("position", "absolute")
-                      .style("z-index", "5")
-                      .style("visibility", "hidden")
-                      .text("Test");
-
+      if(videoNodeSpecs.stats_number_of_likes.max < videos[i].stats_number_of_likes) 
+        videoNodeSpecs.stats_number_of_likes.max = videos[i].stats_number_of_likes;
       
+      if(videoNodeSpecs.stats_number_of_comments.max < videos[i].stats_number_of_comments) 
+        videoNodeSpecs.stats_number_of_comments.max = videos[i].stats_number_of_comments;
+      
+      if(videoNodeSpecs.duration.max < videos[i].duration) 
+        videoNodeSpecs.duration.max = videos[i].duration;
+    }
 
-      function renderChart(updateCurrentVideo){
+    // determine stattype 
+    var statPicker = document.getElementById('stat-picker'),
+      statType = statPicker.options[statPicker.selectedIndex].value;
 
-        // clear the bar chart
-        d3.selectAll("circle").remove();
+    // render chart for the first time, 
+    // local variable created for  video click handler
+    // for reference
+    var onVideoClick = this.props.onVideoClick
 
+    renderChart(onVideoClick);
 
-          var linearScale = d3.scale.linear()
-                .domain([0,videoNodeSpecs[statType].max])
-                .range([0,100]);
-
-
-          var force = d3.layout.force()
-              .nodes(videos)
-              .size([width, height])
-              .gravity(.05)
-              .distance(10)
-              .charge(-50)
-              .on("tick", function(e){
-                var k = 6 * e.alpha;
-
-                node.attr("cx", function(d) { return d.x; })
-                    .attr("cy", function(d) { return d.y; });
-              })
-              .start();
-
-          var node = svg.selectAll(".video-node")
-              .data(videos)
-            .enter().append("circle")
-              .attr("class", "node")
-              .attr("cx", function(d) { return d.x; })
-              .attr("cy", function(d) { return d.y; })
-              .attr("r", function(d){
-                return d[statType] ? linearScale(d[statType]) : 0
-              })
-              .style(videoNodeSpecs[statType].style)
-              .on("mouseover", function(){return tooltip.style("visibility", "visible");})
-              .on("mousemove", mousemove)
-              .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
-              .on('click', updateCurrentVideo)
-              .call(force.drag);
+    //update stattype on selection and re-render chart
+    statPicker.addEventListener('change', function(e){
+        statType = statPicker.options[statPicker.selectedIndex].value;
+        renderChart(onVideoClick);
+    }, false);
 
 
+    // small window that disaplys when mouse hovers over a video node
+    var tooltip = d3.selectAll(".bubble-diagram").append("div")
+                    .attr("class", "tooltip")
 
-          d3.select(".bubble-diagram")
-              .on("mousedown", function() {
-                  videos.forEach(function(o, i) {
-                  o.x += (Math.random() - .5) * 40;
-                  o.y += (Math.random() - .5) * 40;
-                });
-                force.resume();
-              });
-      }
+    
+    // renders the bubble chart
+    // uodateCurrentVideo is the passed function
+    // that handles when a video node is clicked
+    function renderChart(updateCurrentVideo){
 
-      // Called when mouse hovers over video node
+      // clear the bar chart
+      d3.selectAll("circle").remove();
+
+      //range used based on max value of each node
+      var linearScale = d3.scale.linear()
+            .domain([0,videoNodeSpecs[statType].max])
+            .range([0,100]);
+
+      // set up the force layout for the diagram
+      var force = d3.layout.force()
+          .nodes(videos)
+          .size([width, height])
+          .gravity(.05)
+          .distance(10)
+          .charge(-50)
+          .on("tick", function(e){
+            var k = 6 * e.alpha;
+
+            node.attr("cx", function(d) { return d.x; })
+                .attr("cy", function(d) { return d.y; });
+          })
+          .start();
+
+      //video nodes
+      var node = svg.selectAll(".video-node")
+          .data(videos)
+        .enter().append("circle")
+          .attr("class", "node")
+          .attr("cx", function(d) { return d.x; })
+          .attr("cy", function(d) { return d.y; })
+          .attr("r", function(d){
+            return d[statType] ? linearScale(d[statType]) : 0
+          })
+          .on("mouseover", function(){return tooltip.style("visibility", "visible");})
+          .on("mousemove", mousemove)
+          .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
+          .on('click', updateCurrentVideo)
+          .style(videoNodeSpecs[statType].style)
+          .call(force.drag);
+
+
+      // when bubble diagram is clicked, make particles bounce
+      d3.select(".bubble-diagram")
+          .on("mousedown", function() {
+              videos.forEach(function(o, i) {
+              o.x += (Math.random() - .5) * 40;
+              o.y += (Math.random() - .5) * 40;
+            });
+            force.resume();
+          });
+    }
+
+    // Called when mouse hovers over video node
     function mousemove(videoNode) {
       var html = '<h1>'+videoNode.title+'</h1><img src ="'+videoNode.thumbnail_medium+'"></img>' +
-                  '<p>'+videoNode.stats_number_of_likes+' likes </p><p>'+videoNode.stats_number_of_comments+' comments</p>'+
-                  '<p>' +videoNode.stats_number_of_plays+' plays </p>';
+                  '<p><span style = "color:green">' +videoNode.stats_number_of_plays+' plays </span> <br />'+
+                  '<span style = "color:red">'+videoNode.stats_number_of_likes+' likes</span> <br />' +
+                  '<span style = "color:blue">'+videoNode.stats_number_of_comments+' comments</span> </p>';
       tooltip
             .html(html)
             .style("left", (event.pageX) + "px")
             .style("top", (event.pageY) + "px")
-            .style('background-color', 'grey');        
+            .style('background-color', 'lightgrey');        
     }
-
-      // Processes the given video json data
-      function processData(data) { 
-          var newDataSet = [];
-
-          data.forEach(function(obj){
-              newDataSet.push({
-                  id : obj.id,
-                  name: obj.title, 
-                  className: "video-node",
-                  stats : {
-                      'plays' : obj.stats_number_of_plays,
-                      'likes' : obj.stats_number_of_likes,
-                      'comments' : obj.stats_number_of_comments,
-                      'duration' : obj.duration
-                  },
-                  thumbnail : obj.thumbnail_medium,
-                  description : obj.description
-              }); 
-          });  
-          
-          return {children: newDataSet}; 
-      }
    
   },
 
@@ -390,13 +369,20 @@ var BubbleChart = React.createClass({
   render : function(){
     return (
       <div className ="bubble-chart" >
-      Test
+      <hr />
+       <p style = {{'fontSize':'small', 'textAlign':'left'}}>
+         <em>Each node represents a video. The size of the node depends 
+         on what kind of data is being represented, which can be chosen below. 
+         If you hover over a node, a small window will show displaying the stats for that video. 
+         If you click on it, you can watch it below!</em>
+       </p>
         <select id ="stat-picker">
             <option value ='stats_number_of_plays'>Plays</option>
             <option value ='stats_number_of_likes'>Likes</option>
             <option value ='stats_number_of_comments'>Comments</option>
             <option value ='duration'>Duration</option>
         </select>
+        <br />
         <div className = "bubble-diagram" />
       </div>
     );
