@@ -23,7 +23,6 @@ Component Hierarchy
 **/
 var Container = React.createClass({
 
-  // Search in both group and channel
   _handleSearch : function(searchQuery){
       this._getInfo(searchQuery);
       this._getVideos(searchQuery);
@@ -48,7 +47,6 @@ var Container = React.createClass({
           }.bind(this)
       });
   },
-
 
   // AJAX call to get video list
   // each call to the Vimeo Simple APi results in 20 items per page
@@ -120,10 +118,10 @@ var Container = React.createClass({
 
 /**
 * Header
-* contains the application title and search field
+* contains the application title and search form
 */
 var Header = React.createClass({
-  // Handles the submission from the child input DOM element
+  // Handles the search query submission and passes it to the parent component
   _handleSubmit : function() {
     var searchQuery = React.findDOMNode(this.refs.searchQuery).value.trim();
 
@@ -153,12 +151,12 @@ var Header = React.createClass({
 */
 var Main = React.createClass({
 
-  // called when a video node is clicked
+  // Called when a video node is clicked
   _handleVideoClick : function(selectedVideo){
     this.setState({video: selectedVideo});
   },
 
-  //formats the date string 
+  // Formats the date string 
   _formatDate : function(date){
     var d = date.split(" ")[0].split("-");
 
@@ -173,20 +171,24 @@ var Main = React.createClass({
 
 
   render : function() {
-    var dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "?";
-    
+    var title = this.props.info.name,
+        dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "?",
+        description = this.props.info.description,
+        creator = this.props.info.creator_display_name,
+        totalVids = this.props.info.total_videos,
+        totalSubs = this.props.info.total_subscribers;
 
     return (
       <div className = "main">
         <img className="logo-header" src = {this.props.info.logo || "https://i.vimeocdn.com/video/default_980x250"} />
-        <h1 style ={{'fontWeight':'300'}}>{this.props.info.name} </h1><br />
-        Created By <b>{this.props.info.creator_display_name}</b> on {dateCreated}
+        <h1 style ={{'fontWeight':'300'}}>{title} </h1><br />
+        Created By <b>{creator}</b> on {dateCreated}
         
-        <p>{this.props.info.description}</p>
+        <p>{description}</p>
 
         <p>
-        Videos : <b>{this.props.info.total_videos}</b> <br /> 
-        Subscribers : <b>{this.props.info.total_subscribers}</b>
+        Videos : <b>{totalVids}</b> <br /> 
+        Subscribers : <b>{totalSubs}</b>
         </p>
 
         <BubbleChart videos = {this.props.videos} onVideoClick = {this._handleVideoClick}/>
@@ -197,8 +199,8 @@ var Main = React.createClass({
 });
 
 /**
-* VideoPlayer
-* contains the bubble chart that displays stats of the channel
+* BubbleChart
+* contains the bubble chart and stats of the channel
 */
 var BubbleChart = React.createClass({
 
@@ -356,8 +358,7 @@ var BubbleChart = React.createClass({
             .style("left", (event.pageX) + "px")
             .style("top", (event.pageY) + "px")
             .style('background-color', 'lightgrey');        
-    }
-   
+    }   
   },
 
   componentDidUpdate : function(){
@@ -371,7 +372,7 @@ var BubbleChart = React.createClass({
       <div className ="bubble-chart" >
       <hr />
        <p style = {{'fontSize':'small', 'textAlign':'left'}}>
-         <em>Each node represents a video. The size of the node depends 
+         <em>Each node represents a video(limit at only 60 videos)w. The radius of the node depends 
          on what kind of data is being represented, which can be chosen below. 
          If you hover over a node, a small window will show displaying the stats for that video. 
          If you click on it, you can watch it below!</em>
@@ -391,7 +392,7 @@ var BubbleChart = React.createClass({
 
 /**
 * VideoPlayer
-* contains the logo-header, channel information and bubble chart
+* contains the current video chosen
 */
 var VideoPlayer = React.createClass({
     render : function(){
