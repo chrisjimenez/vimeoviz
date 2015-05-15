@@ -1,174 +1,429 @@
 /***************************************************************************
-* Vimeo Search
-* main.js
-*
-* Component hierarchy
-*
-* Content
-* --/Header
-* --/Main
-* ----/SearchField
-* ----/VideoList
-* -------/Video
-* ----/PageNav
-* --/Footer
+By Chris Jimenez
+
+main.js
+
+* functions that begin with an underscore "_" are custom functions.
+
+Component Hierarchy
+-------------------
+0 Container
+    0.0 Header
+        0.0.0 SearchField
+    0.1 Main
+        0.1.0 BubbleChart
+        0.1.1 Video
+    0.2 Footer
+-------------------
 ***************************************************************************/
-'use strict';
 
 /**
-* Search field 
-*/
-var SearchField = React.createClass({
-    render : function() {
-        return (
-            <form className ='search-field'></form>
-        );
-    }
-});
+* Container
+* contains all the elements of the document
+**/
+var Container = React.createClass({
 
-/**
-* Page navigation 
-*/
-var PageNav = React.createClass({
-    render : function() {
-        return (
-            <nav className="page-nav">page nav</nav>
-        );
-    }
-});
+  // Search in both group and channel
+  _handleSearch : function(searchQuery){
+      this._getInfo(searchQuery);
+      this._getVideos(searchQuery);
+  },
 
-/**
-* video 
-*/
-var VideoBlock = React.createClass({
-    getEmbeddedVideo : function(videoId){
-        var src = "http://player.vimeo.com/video/"+videoId;
-        console
-        return (
-            <iframe src={src} width="100px" height="100px" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
-        );
-    },
+  // AJAX call to get channel info 
+  _getInfo : function(searchQuery){
+      var infoUrl = "http://vimeo.com/api/v2/channel/"+searchQuery+"/info.json";
+
+      $.ajax({
+          url: infoUrl,
+          dataType: 'json',
+          cache: false,
+          success: function(data) {
+              // if there is no logo, assign to a default logo
+              if(!data.logo) data.logo = "https://i.vimeocdn.com/video/default_980x250";
+              this.setState({info: data});
+          }.bind(this),
+          error: function(xhr, status, err) {
+              console.error(infoUrl, status, err.toString());
+          }.bind(this)
+      });
+  },
 
 
-    render : function() {
-        return (
-            <div className ='video-block'> 
-                <div className ="video">
-                    {this.getEmbeddedVideo(this.props.videoData.id)}
-                </div>
-                <div className ="description">
-                    {this.props.videoData.description}
-                </div>
-                <div className ="stats"></div> 
-            </div>
-        );
-    }
-});
+  // AJAX call to get video list
+  // each call to the Vimeo Simple APi results in 20 items per page
+  // response limit is 60 videos using &page param
+  _getVideos : function(searchQuery){
+      var videoUrl = "http://vimeo.com/api/v2/channel/"+searchQuery+"/videos.json&?page=";
+      var videoList = [];
 
+      $.ajax({
+          url: videoUrl+"1",
+          dataType: 'json',
+          cache: false,
+          success: function(data1) {
+                 $.ajax({
+                    url: videoUrl+"2",
+                    dataType: 'json',
+                    cache: false,
+                    success: function(data2) {
+                                         $.ajax({
+                                            url: videoUrl+"3",
+                                            dataType: 'json',
+                                            cache: false,
+                                            success: function(data3) {
+                                                this.setState({videos: data1.concat(data2).concat(data3)});
+                                            }.bind(this),
+                                            error: function(xhr, status, err) {
+                                                console.error(videoUrl+"3", status, err.toString());
+                                            }.bind(this)
+                                        });  
+                    }.bind(this),
+                    error: function(xhr, status, err) {
+                        console.error(videoUrl+"2", status, err.toString());
+                    }.bind(this)
+                });  
+          }.bind(this),
+          error: function(xhr, status, err) {
+              console.error(videoUrl+"1", status, err.toString());
+          }.bind(this)
+      });
 
-/**
-* video list
-*/
-var VideoList = React.createClass({
-    render : function() {
-        var videoBlockNodes = this.props.data.map(function(videoData){
-            return (
-                <VideoBlock videoData={videoData}/>
-            );
-        });
+  },
 
-        return (
-            <div className ='video-list'>
-                {videoBlockNodes}
-            </div>
-        );
-    }
+  componentWillMount : function(){
+      this._handleSearch("cats")
+  },
+
+  getInitialState: function() {
+      return {
+          info: [],
+          videos: []
+      };
+  },
+
+  render : function(){
+      return (
+          <div className = "container">
+              <Header onSearchSubmission = {this._handleSearch}/>
+              <Main info = {this.state.info} videos = {this.state.videos} />
+              <div className ='footer'>
+                <h1> FOOTER </h1>
+              </div>
+          </div>
+      );
+  }
 });
 
 /**
 * Header
+* contains the application title and search field
 */
 var Header = React.createClass({
-    render : function() {
-        return (
-            <div className ='header'>
-                <h1> HEADER </h1>
-            </div>
-        );
-    }
+  // Handles the submission from the child input DOM element
+  _handleSubmit : function() {
+      // remove any potential extra spaces in the search query
+      var searchQuery = React.findDOMNode(this.refs.searchQuery).value.trim();
+
+      // return if there is no search request
+      if (!searchQuery) {
+          return;
+      }
+
+      // send search query back up to parent(Container)
+      this.props.onSearchSubmission(searchQuery);
+  },
+
+  render : function() {
+    return (
+      <div className ='header'>
+        <h3>Vimeo Channel Stats Visualization</h3>
+        <div className ="search-form">
+          <input className ="search-field" type="text" placeholder="Search for channels" ref = "searchQuery" />
+          <input className ="search-button"type="button" value="Submit" onClick={this._handleSubmit}/>
+        </div>
+      </div>
+    );
+  }
 });
 
-
 /**
-* main
+* Main
+* contains the logo-header, channel information and bubble chart
 */
 var Main = React.createClass({
-    loadSelections : function(){
-        $.ajax({
-            url: this.props.url,
-            dataType: 'json',
-            cache: false,
-            success: function(data) {
-                this.setState({data: data});
-            }.bind(this),
-            error: function(xhr, status, err) {
-                console.error(this.props.url, status, err.toString());
-            }.bind(this)
-        });
 
-    },
+  // called when a video node is clicked
+  _handleVideoClick : function(selectedVideo){
+    this.setState({video: selectedVideo});
+  },
 
-    getInitialState : function() {
-        return {data : []};
-    },
-    componentDidMount : function(){
-        this.loadSelections();
-        setInterval(this.loadSelections(), this.props.pollInterval)
-    },
+  //formats the date string 
+  _formatDate : function(date){
+    var d = date.split(" ")[0].split("-");
 
-    render : function() {
-        return (
-            <div className ='main'>
-                <SearchField />
-                <VideoList data={this.state.data} />
-            </div>
-        );
-    }
+    return d[1]+"/"+d[2]+"/"+d[0]
+  },
+
+  getInitialState : function(){
+    return {
+      video : this.props.videos[0]
+    };
+  },
+
+  render : function() {
+    var dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "hey";
+    console.log(dateCreated)
+    return (
+      <div className = "main">
+        <img className="logo-header" src = {this.props.info.logo} />
+        <h1 style ={{'fontWeight':'300'}}>{this.props.info.name} </h1><br />
+        Created By <b>{this.props.info.creator_display_name}</b> on {dateCreated}
+        <p>{this.props.info.description}</p>
+        <p>
+        Videos : <b>{this.props.info.total_videos}</b> <br /> 
+        Subscribers : <b>{this.props.info.total_subscribers}</b>
+        </p>
+
+        <BubbleChart videos = {this.props.videos} onVideoClick = {this._handleVideoClick}/>
+        <VideoPlayer video = {this.state.video || this.props.videos[0]} />
+      </div>
+    );
+  }
 });
-
-
 
 /**
-* Footer
+* VideoPlayer
+* contains the bubble chart that displays stats of the channel
 */
-var Footer = React.createClass({
-    render : function() {
-        return (
-            <div className ='footer'>
-                <h1> FOOTER </h1>
-            </div>
-        );
+var BubbleChart = React.createClass({
+
+  // Displays the bubble chart
+  _runD3Visualization : function(videos){
+
+      // remove the old svg element from the page 
+      d3.select("svg").remove();
+
+      var width = 760,
+          height = 600;
+
+      // set up the new svg element
+      var svg = d3.select('.bubble-diagram').append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+      // video node style based on statType
+      var videoNodeSpecs = {
+          'stats_number_of_plays' : {
+              'style' : {
+                    'stroke': 'green',
+                    'fill':'#66CC99',                
+                    },
+              'max' : 0
+          },
+          'stats_number_of_likes' : {
+              'style' : {
+                    'stroke': 'red',
+                    'fill':'#DF4949'              
+                    },
+              'max' : 0
+          },
+          'stats_number_of_comments' : {
+              'style' : {
+                    'stroke':'blue',
+                    'fill':'#44BBFF'               
+                    },
+
+              'max' : 0
+          },
+          'duration' : {
+              'style' : {
+                    'stroke':'purple',
+                    'fill':'yellow',               
+                    },
+
+              'max' : 0       
+          }
+      }
+
+      //get stat range for each video
+      for(var i = 0; i < videos.length; i++){
+        if(videoNodeSpecs.stats_number_of_plays.max < videos[i].stats_number_of_plays) 
+          videoNodeSpecs.stats_number_of_plays.max = videos[i].stats_number_of_plays;
+
+        if(videoNodeSpecs.stats_number_of_likes.max < videos[i].stats_number_of_likes) 
+          videoNodeSpecs.stats_number_of_likes.max = videos[i].stats_number_of_likes;
+        
+        if(videoNodeSpecs.stats_number_of_comments.max < videos[i].stats_number_of_comments) 
+          videoNodeSpecs.stats_number_of_comments.max = videos[i].stats_number_of_comments;
+        
+        if(videoNodeSpecs.duration.max < videos[i].duration) 
+          videoNodeSpecs.duration.max = videos[i].duration;
+      }
+
+      // determine stattype 
+      var statPicker = document.getElementById('stat-picker'),
+        statType = statPicker.options[statPicker.selectedIndex].value;
+
+      // render chart for the first time, 
+      // local variable created for  video click handler
+      // for reference
+      var onVideoClick = this.props.onVideoClick
+
+      renderChart(onVideoClick);
+
+      //update stattype on selection and re-render chart
+      statPicker.addEventListener('change', function(e){
+          statType = statPicker.options[statPicker.selectedIndex].value;
+          renderChart(onVideoClick);
+      }, false);
+
+
+      // small window that disaplys when mouse hovers over a video node
+      var tooltip = d3.select("body").append("div")
+                      .attr("class", "tooltip")
+                      .style("position", "absolute")
+                      .style("z-index", "5")
+                      .style("visibility", "hidden")
+                      .text("Test");
+
+      
+
+      function renderChart(updateCurrentVideo){
+
+        // clear the bar chart
+        d3.selectAll("circle").remove();
+
+
+          var linearScale = d3.scale.linear()
+                .domain([0,videoNodeSpecs[statType].max])
+                .range([0,100]);
+
+
+          var force = d3.layout.force()
+              .nodes(videos)
+              .size([width, height])
+              .gravity(.05)
+              .distance(10)
+              .charge(-50)
+              .on("tick", function(e){
+                var k = 6 * e.alpha;
+
+                node.attr("cx", function(d) { return d.x; })
+                    .attr("cy", function(d) { return d.y; });
+              })
+              .start();
+
+          var node = svg.selectAll(".video-node")
+              .data(videos)
+            .enter().append("circle")
+              .attr("class", "node")
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; })
+              .attr("r", function(d){
+                return d[statType] ? linearScale(d[statType]) : 0
+              })
+              .style(videoNodeSpecs[statType].style)
+              .on("mouseover", function(){return tooltip.style("visibility", "visible");})
+              .on("mousemove", mousemove)
+              .on("mouseout", function(){return tooltip.style("visibility", "hidden");})
+              .on('click', updateCurrentVideo)
+              .call(force.drag);
+
+
+
+          d3.select(".bubble-diagram")
+              .on("mousedown", function() {
+                  videos.forEach(function(o, i) {
+                  o.x += (Math.random() - .5) * 40;
+                  o.y += (Math.random() - .5) * 40;
+                });
+                force.resume();
+              });
+      }
+
+      // Called when mouse hovers over video node
+    function mousemove(videoNode) {
+      var html = '<h1>'+videoNode.title+'</h1><img src ="'+videoNode.thumbnail_medium+'"></img>' +
+                  '<p>'+videoNode.stats_number_of_likes+' likes </p><p>'+videoNode.stats_number_of_comments+' comments</p>'+
+                  '<p>' +videoNode.stats_number_of_plays+' plays </p>';
+      tooltip
+            .html(html)
+            .style("left", (event.pageX) + "px")
+            .style("top", (event.pageY) + "px")
+            .style('background-color', 'grey');        
     }
+
+      // Processes the given video json data
+      function processData(data) { 
+          var newDataSet = [];
+
+          data.forEach(function(obj){
+              newDataSet.push({
+                  id : obj.id,
+                  name: obj.title, 
+                  className: "video-node",
+                  stats : {
+                      'plays' : obj.stats_number_of_plays,
+                      'likes' : obj.stats_number_of_likes,
+                      'comments' : obj.stats_number_of_comments,
+                      'duration' : obj.duration
+                  },
+                  thumbnail : obj.thumbnail_medium,
+                  description : obj.description
+              }); 
+          });  
+          
+          return {children: newDataSet}; 
+      }
+   
+  },
+
+  componentDidUpdate : function(){
+    if(this.props.videos.length > 0){
+        this._runD3Visualization(this.props.videos);
+    }
+  },
+
+  render : function(){
+    return (
+      <div className ="bubble-chart" >
+      Test
+        <select id ="stat-picker">
+            <option value ='stats_number_of_plays'>Plays</option>
+            <option value ='stats_number_of_likes'>Likes</option>
+            <option value ='stats_number_of_comments'>Comments</option>
+            <option value ='duration'>Duration</option>
+        </select>
+        <div className = "bubble-diagram" />
+      </div>
+    );
+  }
 });
-
-
 
 /**
-* Container
+* VideoPlayer
+* contains the logo-header, channel information and bubble chart
 */
-var Container = React.createClass({
-    render : function() {
-        return (
-            <div>
-                <Header />
-                <Main url ="http://vimeo.com/api/v2/channel/staffpicks/videos.json" pollInterval = {2000} />
-                <Footer />
-            </div>
-        );
+var VideoPlayer = React.createClass({
+    render : function(){
+      var src = this.props.video ? "http://player.vimeo.com/video/"+this.props.video.id : "",
+          height = this.props.video ? this.props.video.height : "450",
+          videoDescription = this.props.video ? (this.props.video.description).split("<br />") : ""
+      return (
+          <div className ="video-player">
+              <iframe src={src} width="100%" height ="400px" frameBorder="0" webkitallowfullscreen mozallowfullscreen allowFullScreen></iframe>
+              <p>
+                {videoDescription}
+              </p>
+          </div>
+      );
     }
 });
 
+/**
+* Renders all the components
+*/
 React.render(
     <Container />,
-    document.getElementById('container')
+    document.body
 );
