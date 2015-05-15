@@ -137,7 +137,7 @@ var Header = React.createClass({
   render : function() {
     return (
       <div className ='header'>
-        <h3>Vimeo Channel Stats Visualization</h3>
+        <h3>Vimeo Channel Statistics</h3>
         <div className ="search-form">
           <input className ="search-field" type="text" placeholder="Search for channels" ref = "searchQuery" />
           <input className ="search-button"type="button" value="Search" onClick={this._handleSubmit}/>
@@ -370,7 +370,7 @@ var BubbleChart = React.createClass({
     return (
       <div className ="bubble-chart" >
       <hr />
-       <p style = {{'fontSize':'small', 'text-align':'left'}}>
+       <p style = {{'fontSize':'small', 'textAlign':'left'}}>
          <em>Each node represents a video. The size of the node depends 
          on what kind of data is being represented, which can be chosen below. 
          If you hover over a node, a small window will show displaying the stats for that video. 
@@ -382,8 +382,7 @@ var BubbleChart = React.createClass({
             <option value ='stats_number_of_comments'>Comments</option>
             <option value ='duration'>Duration</option>
         </select>
-              <br />
-
+        <br />
         <div className = "bubble-diagram" />
       </div>
     );
