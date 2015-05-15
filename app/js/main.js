@@ -91,7 +91,7 @@ var Container = React.createClass({
   },
 
   componentWillMount : function(){
-      this._handleSearch("cats")
+      this._handleSearch("staffpicks")
   },
 
   getInitialState: function() {
