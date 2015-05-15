@@ -107,7 +107,10 @@ var Container = React.createClass({
               <Header onSearchSubmission = {this._handleSearch}/>
               <Main info = {this.state.info} videos = {this.state.videos} />
               <div className ='footer'>
-                <h1> FOOTER </h1>
+                <a href = "http://www.github.com/chrisjimenez/vimeoviz"> 
+                  <img src ="github-icon.png">
+                  </img>
+                </a>
               </div>
           </div>
       );
@@ -172,7 +175,7 @@ var Main = React.createClass({
 
   render : function() {
     var dateCreated = this.props.info.created_on ? this._formatDate(this.props.info.created_on) : "hey";
-    console.log(dateCreated)
+
     return (
       <div className = "main">
         <img className="logo-header" src = {this.props.info.logo} />

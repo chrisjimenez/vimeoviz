@@ -37,12 +37,11 @@ h3 {
   color:black;
   width: 35%;
   text-align: center;
-    font-weight: 300;
-
+  font-weight: 300;
 }
 
 .search-field {
-  width: 110px;
+  width: 135px;
 }
 
 .logo-header {
@@ -63,8 +62,10 @@ MAIN + FOOTER
 
 .footer {
   color: white;
+  text-align: center;
   background-color: #203e5e;
   position: absolute;
+  padding: 10px 10px;
   bottom: 0;
   width: 100%;
   left: 0;
