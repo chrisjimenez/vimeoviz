@@ -372,7 +372,7 @@ var BubbleChart = React.createClass({
       <div className ="bubble-chart" >
       <hr />
        <p style = {{'fontSize':'small', 'textAlign':'left'}}>
-         <em>Each node represents a video(limit at only 60 videos)w. The radius of the node depends 
+         <em>Each node represents a video(limit at only 60 videos). The radius of the node depends 
          on what kind of data is being represented, which can be chosen below. 
          If you hover over a node, a small window will show displaying the stats for that video. 
          If you click on it, you can watch it below!</em>
