@@ -348,8 +348,9 @@ var BubbleChart = React.createClass({
     // Called when mouse hovers over video node
     function mousemove(videoNode) {
       var html = '<h1>'+videoNode.title+'</h1><img src ="'+videoNode.thumbnail_medium+'"></img>' +
-                  '<p>'+videoNode.stats_number_of_likes+' likes <br />'+videoNode.stats_number_of_comments+' comments'+
-                  '<br />' +videoNode.stats_number_of_plays+' plays </p>';
+                  '<p><span style = "color:green">' +videoNode.stats_number_of_plays+' plays </span> <br />'+
+                  '<span style = "color:red">'+videoNode.stats_number_of_likes+' likes</span> <br />' +
+                  '<span style = "color:blue">'+videoNode.stats_number_of_comments+' comments</span> </p>';
       tooltip
             .html(html)
             .style("left", (event.pageX) + "px")
